@@ -1,0 +1,193 @@
+{% extends "base.html" %}
+
+{% block title %}{{ equation.name }} - Celestial Linking{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('library') }}">Quantum Library</a></li>
+            <li class="breadcrumb-item active">{{ equation.name }}</li>
+        </ol>
+    </nav>
+
+    <div class="row">
+        <div class="col-lg-5 mb-4">
+            <div class="solver-card">
+                <h2 class="mb-3">
+                    <i class="bi bi-calculator"></i> {{ equation.name }}
+                </h2>
+                <p class="text-muted">{{ equation.description }}</p>
+                
+                <div class="equation-display mb-4">
+                    <strong>Equation:</strong>
+                    <div class="equation-formula-large">{{ equation.formula }}</div>
+                </div>
+
+                <form id="solverForm">
+                    <input type="hidden" name="equation_type" value="{{ equation_type }}">
+                    
+                    {% for param in equation.parameters %}
+                    <div class="mb-3">
+                        <label for="{{ param.name }}" class="form-label">{{ param.label }}</label>
+                        <input type="number" 
+                               class="form-control" 
+                               id="{{ param.name }}" 
+                               name="{{ param.name }}"
+                               value="{{ param.default }}"
+                               min="{{ param.min }}"
+                               max="{{ param.max }}"
+                               step="{{ '1' if param.get('type') == 'int' else '0.1' }}"
+                               required>
+                        <small class="text-muted">Range: {{ param.min }} - {{ param.max }}</small>
+                    </div>
+                    {% endfor %}
+
+                    <button type="submit" class="btn btn-primary btn-lg w-100" id="solveBtn">
+                        <i class="bi bi-lightning"></i> Solve Problem
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <div class="col-lg-7">
+            <div id="loadingSpinner" class="text-center py-5 d-none">
+                <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-3 text-muted">Calculating quantum solution...</p>
+            </div>
+
+            <div id="resultsContainer" class="d-none">
+                <div class="result-card mb-4">
+                    <h4><i class="bi bi-graph-up"></i> Visualization</h4>
+                    <div id="graphContainer" class="graph-container">
+                        <img id="graphImage" src="" alt="Quantum Graph" class="img-fluid">
+                    </div>
+                </div>
+
+                <div class="result-card mb-4">
+                    <h4><i class="bi bi-clipboard-data"></i> Solution</h4>
+                    <div id="solutionData" class="solution-data"></div>
+                </div>
+
+                <div class="result-card mb-4">
+                    <h4><i class="bi bi-list-ol"></i> Step-by-Step Solution</h4>
+                    <div id="stepsContainer" class="steps-container"></div>
+                </div>
+
+                <div class="export-buttons d-flex gap-2 flex-wrap">
+                    <button class="btn btn-success" id="exportGraphBtn" disabled>
+                        <i class="bi bi-image"></i> Export Graph (JPG)
+                    </button>
+                    <button class="btn btn-info" id="exportExcelBtn" disabled>
+                        <i class="bi bi-file-earmark-excel"></i> Export to Excel
+                    </button>
+                </div>
+            </div>
+
+            <div id="errorContainer" class="alert alert-danger d-none"></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentRunId = null;
+let currentSavedId = null;
+
+document.getElementById('solverForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const form = e.target;
+    const formData = new FormData(form);
+    const data = {
+        equation_type: formData.get('equation_type'),
+        parameters: {}
+    };
+    
+    formData.forEach((value, key) => {
+        if (key !== 'equation_type') {
+            data.parameters[key] = parseFloat(value);
+        }
+    });
+
+    document.getElementById('loadingSpinner').classList.remove('d-none');
+    document.getElementById('resultsContainer').classList.add('d-none');
+    document.getElementById('errorContainer').classList.add('d-none');
+    document.getElementById('solveBtn').disabled = true;
+
+    try {
+        const response = await fetch('/api/solve', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        });
+
+        const result = await response.json();
+
+        if (result.error) {
+            throw new Error(result.error);
+        }
+
+        currentRunId = result.run_id;
+        currentSavedId = result.saved_id;
+
+        if (result.graph) {
+            document.getElementById('graphImage').src = 'data:image/png;base64,' + result.graph;
+        }
+
+        const solutionHtml = Object.entries(result.solution).map(([key, value]) => {
+            const formattedKey = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+            const formattedValue = typeof value === 'number' ? 
+                (Math.abs(value) < 0.001 || Math.abs(value) > 10000 ? value.toExponential(4) : value.toFixed(6)) : 
+                value;
+            return `<div class="solution-item">
+                <span class="solution-key">${formattedKey}:</span>
+                <span class="solution-value">${formattedValue}</span>
+            </div>`;
+        }).join('');
+        document.getElementById('solutionData').innerHTML = solutionHtml;
+
+        const stepsHtml = result.steps.map((step, index) => 
+            `<div class="step-item">
+                <span class="step-number">${index + 1}</span>
+                <span class="step-text">${step}</span>
+            </div>`
+        ).join('');
+        document.getElementById('stepsContainer').innerHTML = stepsHtml;
+
+        document.getElementById('resultsContainer').classList.remove('d-none');
+        
+        document.getElementById('exportGraphBtn').disabled = false;
+        document.getElementById('exportExcelBtn').disabled = !currentSavedId;
+
+    } catch (error) {
+        document.getElementById('errorContainer').textContent = error.message;
+        document.getElementById('errorContainer').classList.remove('d-none');
+    } finally {
+        document.getElementById('loadingSpinner').classList.add('d-none');
+        document.getElementById('solveBtn').disabled = false;
+    }
+});
+
+document.getElementById('exportGraphBtn').addEventListener('click', function() {
+    if (currentSavedId) {
+        window.location.href = `/export/graph/${currentSavedId}`;
+    } else if (currentRunId) {
+        window.location.href = `/export/session/graph/${currentRunId}`;
+    }
+});
+
+document.getElementById('exportExcelBtn').addEventListener('click', function() {
+    if (currentSavedId) {
+        window.location.href = `/export/excel/${currentSavedId}`;
+    } else if (currentRunId) {
+        window.location.href = `/export/session/excel/${currentRunId}`;
+    }
+});
+</script>
+{% endblock %}

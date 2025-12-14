@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block title %}Quantum Library - Celestial Linking{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="text-center mb-5">
+        <h1 class="display-5 fw-bold">
+            <i class="bi bi-book"></i> Quantum Library
+        </h1>
+        <p class="lead text-muted">Select an equation to solve a quantum physics problem</p>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-6 mx-auto">
+            <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-search"></i></span>
+                <input type="text" class="form-control" id="searchEquations" placeholder="Search equations...">
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4" id="equationsGrid">
+        {% for eq_type, eq in equations.items() %}
+        <div class="col-md-6 col-lg-4 equation-item" data-name="{{ eq.name.lower() }}" data-desc="{{ eq.description.lower() }}">
+            <div class="equation-card h-100">
+                <div class="equation-card-header">
+                    <h4>{{ eq.name }}</h4>
+                </div>
+                <div class="equation-card-body">
+                    <p class="text-muted">{{ eq.description }}</p>
+                    <div class="equation-formula-display mb-3">
+                        {{ eq.formula }}
+                    </div>
+                    <div class="parameters-preview">
+                        <small class="text-muted">
+                            <strong>Parameters:</strong>
+                            {% for param in eq.parameters %}
+                            {{ param.label }}{% if not loop.last %}, {% endif %}
+                            {% endfor %}
+                        </small>
+                    </div>
+                </div>
+                <div class="equation-card-footer">
+                    <a href="{{ url_for('solver', equation_type=eq_type) }}" class="btn btn-primary w-100">
+                        <i class="bi bi-calculator"></i> Solve This Problem
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('searchEquations').addEventListener('input', function(e) {
+    const query = e.target.value.toLowerCase();
+    document.querySelectorAll('.equation-item').forEach(function(item) {
+        const name = item.dataset.name;
+        const desc = item.dataset.desc;
+        if (name.includes(query) || desc.includes(query)) {
+            item.style.display = '';
+        } else {
+            item.style.display = 'none';
+        }
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+
+{% block title %}Celestial Linking - Quantum Physics Problem Solver{% endblock %}
+
+{% block content %}
+<section class="hero-section">
+    <div class="container">
+        <div class="row align-items-center min-vh-75">
+            <div class="col-lg-6">
+                <h1 class="display-3 fw-bold mb-4">
+                    <span class="gradient-text">Celestial Linking</span>
+                </h1>
+                <p class="lead mb-4">
+                    Explore the quantum realm with our advanced physics problem solver. 
+                    Calculate wavefunctions, visualize probability densities, and unlock the mysteries of quantum mechanics.
+                </p>
+                <div class="d-flex gap-3 flex-wrap">
+                    <a href="{{ url_for('library') }}" class="btn btn-primary btn-lg">
+                        <i class="bi bi-book"></i> Explore Library
+                    </a>
+                    {% if not user or not user.is_authenticated %}
+                    <a href="{{ url_for('replit_auth.login') }}" class="btn btn-outline-light btn-lg">
+                        <i class="bi bi-person-plus"></i> Get Started
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="col-lg-6 text-center mt-5 mt-lg-0">
+                <div class="quantum-animation">
+                    <div class="orbit orbit-1"></div>
+                    <div class="orbit orbit-2"></div>
+                    <div class="orbit orbit-3"></div>
+                    <div class="nucleus"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="features-section py-5">
+    <div class="container">
+        <h2 class="text-center mb-5">
+            <i class="bi bi-stars"></i> Platform Capabilities
+        </h2>
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="feature-card h-100">
+                    <div class="feature-icon">
+                        <i class="bi bi-calculator"></i>
+                    </div>
+                    <h4>Quantum Equations</h4>
+                    <p>Access a comprehensive library of quantum physics equations including Schrodinger equation solutions, harmonic oscillators, and more.</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="feature-card h-100">
+                    <div class="feature-icon">
+                        <i class="bi bi-graph-up"></i>
+                    </div>
+                    <h4>Visualizations</h4>
+                    <p>Generate beautiful 1D graphs showing wavefunctions and probability densities with our advanced plotting capabilities.</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="feature-card h-100">
+                    <div class="feature-icon">
+                        <i class="bi bi-cloud-download"></i>
+                    </div>
+                    <h4>Export Results</h4>
+                    <p>Download your solutions as Excel spreadsheets and graphs as JPG images for reports and presentations.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="equations-preview py-5">
+    <div class="container">
+        <h2 class="text-center mb-5">
+            <i class="bi bi-infinity"></i> Featured Equations
+        </h2>
+        <div class="row g-4">
+            <div class="col-md-6 col-lg-3">
+                <div class="equation-preview-card">
+                    <h5>Particle in a Box</h5>
+                    <div class="equation-formula">ψₙ(x) = √(2/L) sin(nπx/L)</div>
+                    <a href="{{ url_for('solver', equation_type='particle_in_box') }}" class="btn btn-sm btn-outline-primary mt-2">Solve</a>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-3">
+                <div class="equation-preview-card">
+                    <h5>Harmonic Oscillator</h5>
+                    <div class="equation-formula">E = ℏω(n + ½)</div>
+                    <a href="{{ url_for('solver', equation_type='harmonic_oscillator') }}" class="btn btn-sm btn-outline-primary mt-2">Solve</a>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-3">
+                <div class="equation-preview-card">
+                    <h5>Hydrogen Atom</h5>
+                    <div class="equation-formula">E = -13.6/n² eV</div>
+                    <a href="{{ url_for('solver', equation_type='hydrogen_radial') }}" class="btn btn-sm btn-outline-primary mt-2">Solve</a>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-3">
+                <div class="equation-preview-card">
+                    <h5>Quantum Tunneling</h5>
+                    <div class="equation-formula">T ≈ e^(-2κa)</div>
+                    <a href="{{ url_for('solver', equation_type='quantum_tunneling') }}" class="btn btn-sm btn-outline-primary mt-2">Solve</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="cta-section py-5">
+    <div class="container text-center">
+        <h2 class="mb-4">Ready to Explore Quantum Physics?</h2>
+        <p class="lead mb-4">Sign in to save your solutions and access them from anywhere.</p>
+        <a href="{{ url_for('library') }}" class="btn btn-primary btn-lg">
+            <i class="bi bi-rocket"></i> Start Solving
+        </a>
+    </div>
+</section>
+{% endblock %}

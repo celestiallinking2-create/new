@@ -1,0 +1,273 @@
+{% extends "base.html" %}
+
+{% block title %}Runs & Results - Celestial Linking{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="text-center mb-5">
+        <h1 class="display-5 fw-bold">
+            <i class="bi bi-clock-history"></i> Runs & Results
+        </h1>
+        <p class="lead text-muted">History of all your solved quantum physics problems</p>
+    </div>
+
+    {% if not user or not user.is_authenticated %}
+    <div class="alert alert-info text-center mb-4">
+        <i class="bi bi-info-circle"></i>
+        <a href="{{ url_for('replit_auth.login') }}">Sign in</a> to save your problems permanently.
+        Session data will be lost when you close the browser.
+    </div>
+    {% endif %}
+
+    {% if saved_problems %}
+    <h4 class="mb-3"><i class="bi bi-cloud-check"></i> Saved Problems</h4>
+    <div class="table-responsive mb-5">
+        <table class="table table-dark table-hover">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Equation</th>
+                    <th>Parameters</th>
+                    <th>Key Result</th>
+                    <th>Solved On</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for problem in saved_problems %}
+                {% set params = problem.get_parameters() %}
+                {% set solution = problem.get_solution() %}
+                <tr>
+                    <td>{{ problem.id }}</td>
+                    <td>{{ problem.equation_name }}</td>
+                    <td>
+                        <small>
+                            {% for key, value in params.items() %}
+                            {{ key }}={{ value }}{% if not loop.last %}, {% endif %}
+                            {% endfor %}
+                        </small>
+                    </td>
+                    <td>
+                        {% if solution %}
+                        {% set first_key = solution.keys()|list|first %}
+                        {{ first_key.replace('_', ' ').title() }}: 
+                        {% set val = solution[first_key] %}
+                        {% if val is number %}
+                        {{ "%.4e"|format(val) if val|abs < 0.001 or val|abs > 10000 else "%.4f"|format(val) }}
+                        {% else %}
+                        {{ val }}
+                        {% endif %}
+                        {% endif %}
+                    </td>
+                    <td><small>{{ problem.created_at.strftime('%Y-%m-%d %H:%M') }}</small></td>
+                    <td>
+                        <button class="btn btn-sm btn-primary view-saved-btn" data-id="{{ problem.id }}">
+                            <i class="bi bi-eye"></i>
+                        </button>
+                        <a href="{{ url_for('export_graph', problem_id=problem.id) }}" class="btn btn-sm btn-outline-success">
+                            <i class="bi bi-image"></i>
+                        </a>
+                        <a href="{{ url_for('export_excel', problem_id=problem.id) }}" class="btn btn-sm btn-outline-info">
+                            <i class="bi bi-file-excel"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+
+    {% if runs %}
+    <h4 class="mb-3"><i class="bi bi-clock"></i> Session Runs</h4>
+    <div class="table-responsive">
+        <table class="table table-dark table-hover">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Equation</th>
+                    <th>Parameters</th>
+                    <th>Key Result</th>
+                    <th>Time</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for run in runs|reverse %}
+                <tr>
+                    <td>{{ run.id }}</td>
+                    <td>{{ run.equation_name }}</td>
+                    <td>
+                        <small>
+                            {% for key, value in run.parameters.items() %}
+                            {{ key }}={{ value }}{% if not loop.last %}, {% endif %}
+                            {% endfor %}
+                        </small>
+                    </td>
+                    <td>
+                        {% if run.solution %}
+                        {% set first_key = run.solution.keys()|list|first %}
+                        {{ first_key.replace('_', ' ').title() }}: 
+                        {% set val = run.solution[first_key] %}
+                        {% if val is number %}
+                        {{ "%.4e"|format(val) if val|abs < 0.001 or val|abs > 10000 else "%.4f"|format(val) }}
+                        {% else %}
+                        {{ val }}
+                        {% endif %}
+                        {% endif %}
+                    </td>
+                    <td><small>{{ run.timestamp[:19] }}</small></td>
+                    <td>
+                        <button class="btn btn-sm btn-primary view-run-btn" data-id="{{ run.id }}">
+                            <i class="bi bi-eye"></i>
+                        </button>
+                        <a href="{{ url_for('export_session_graph', run_id=run.id) }}" class="btn btn-sm btn-outline-success">
+                            <i class="bi bi-image"></i>
+                        </a>
+                        <a href="{{ url_for('export_session_excel', run_id=run.id) }}" class="btn btn-sm btn-outline-info">
+                            <i class="bi bi-file-excel"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+
+    {% if not runs and not saved_problems %}
+    <div class="text-center py-5">
+        <i class="bi bi-hourglass" style="font-size: 4rem; color: var(--accent-secondary);"></i>
+        <h4 class="mt-3">No Runs Yet</h4>
+        <p class="text-muted">Solve quantum physics problems to see them here!</p>
+        <a href="{{ url_for('library') }}" class="btn btn-primary">
+            <i class="bi bi-book"></i> Go to Library
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+<div class="modal fade" id="runModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="runModalTitle">Run Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-lg-6">
+                        <div id="runGraphContainer" class="graph-container mb-3">
+                            <img id="runGraphImage" src="" alt="Graph" class="img-fluid">
+                        </div>
+                    </div>
+                    <div class="col-lg-6">
+                        <h6>Parameters</h6>
+                        <div id="runParams" class="mb-3"></div>
+                        <h6>Solution</h6>
+                        <div id="runSolution" class="solution-data mb-3"></div>
+                        <h6>Steps</h6>
+                        <div id="runSteps" class="steps-container"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.querySelectorAll('.view-run-btn').forEach(btn => {
+    btn.addEventListener('click', async function() {
+        const runId = parseInt(this.dataset.id);
+        const response = await fetch(`/api/run/${runId}`);
+        const data = await response.json();
+        
+        if (data.error) {
+            alert(data.error);
+            return;
+        }
+
+        document.getElementById('runModalTitle').textContent = data.equation_name + ' - Run #' + data.id;
+        
+        if (data.graph_base64) {
+            document.getElementById('runGraphImage').src = 'data:image/png;base64,' + data.graph_base64;
+        }
+
+        const paramsHtml = Object.entries(data.parameters).map(([key, value]) => 
+            `<div><strong>${key}:</strong> ${value}</div>`
+        ).join('');
+        document.getElementById('runParams').innerHTML = paramsHtml;
+
+        const solutionHtml = Object.entries(data.solution).map(([key, value]) => {
+            const formattedKey = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+            const formattedValue = typeof value === 'number' ? 
+                (Math.abs(value) < 0.001 || Math.abs(value) > 10000 ? value.toExponential(4) : value.toFixed(6)) : 
+                value;
+            return `<div class="solution-item">
+                <span class="solution-key">${formattedKey}:</span>
+                <span class="solution-value">${formattedValue}</span>
+            </div>`;
+        }).join('');
+        document.getElementById('runSolution').innerHTML = solutionHtml;
+
+        const stepsHtml = data.steps.map((step, index) => 
+            `<div class="step-item">
+                <span class="step-number">${index + 1}</span>
+                <span class="step-text">${step}</span>
+            </div>`
+        ).join('');
+        document.getElementById('runSteps').innerHTML = stepsHtml;
+
+        new bootstrap.Modal(document.getElementById('runModal')).show();
+    });
+});
+
+document.querySelectorAll('.view-saved-btn').forEach(btn => {
+    btn.addEventListener('click', async function() {
+        const problemId = parseInt(this.dataset.id);
+        const response = await fetch(`/api/problem/${problemId}`);
+        const data = await response.json();
+        
+        if (data.error) {
+            alert(data.error);
+            return;
+        }
+
+        document.getElementById('runModalTitle').textContent = data.equation_name;
+        
+        if (data.graph) {
+            document.getElementById('runGraphImage').src = 'data:image/png;base64,' + data.graph;
+        }
+
+        const paramsHtml = Object.entries(data.parameters).map(([key, value]) => 
+            `<div><strong>${key}:</strong> ${value}</div>`
+        ).join('');
+        document.getElementById('runParams').innerHTML = paramsHtml;
+
+        const solutionHtml = Object.entries(data.solution).map(([key, value]) => {
+            const formattedKey = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+            const formattedValue = typeof value === 'number' ? 
+                (Math.abs(value) < 0.001 || Math.abs(value) > 10000 ? value.toExponential(4) : value.toFixed(6)) : 
+                value;
+            return `<div class="solution-item">
+                <span class="solution-key">${formattedKey}:</span>
+                <span class="solution-value">${formattedValue}</span>
+            </div>`;
+        }).join('');
+        document.getElementById('runSolution').innerHTML = solutionHtml;
+
+        const stepsHtml = data.steps.map((step, index) => 
+            `<div class="step-item">
+                <span class="step-number">${index + 1}</span>
+                <span class="step-text">${step}</span>
+            </div>`
+        ).join('');
+        document.getElementById('runSteps').innerHTML = stepsHtml;
+
+        new bootstrap.Modal(document.getElementById('runModal')).show();
+    });
+});
+</script>
+{% endblock %}

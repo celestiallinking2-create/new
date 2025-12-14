@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+
+{% block title %}My Account - Celestial Linking{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row">
+        <div class="col-lg-4 mb-4">
+            <div class="account-card text-center">
+                <div class="profile-image-container mb-3">
+                    {% if user.profile_image_url %}
+                    <img src="{{ user.profile_image_url }}" alt="Profile" class="profile-image">
+                    {% else %}
+                    <div class="profile-placeholder">
+                        <i class="bi bi-person-circle"></i>
+                    </div>
+                    {% endif %}
+                </div>
+                <h3>
+                    {% if user.first_name %}
+                    {{ user.first_name }} {{ user.last_name or '' }}
+                    {% else %}
+                    User
+                    {% endif %}
+                </h3>
+                <p class="text-muted">{{ user.email or 'No email' }}</p>
+                <hr>
+                <div class="account-stats">
+                    <div class="stat-item">
+                        <span class="stat-value">{{ problems|length }}</span>
+                        <span class="stat-label">Solved Problems</span>
+                    </div>
+                </div>
+                <hr>
+                <a href="{{ url_for('replit_auth.logout') }}" class="btn btn-outline-danger w-100">
+                    <i class="bi bi-box-arrow-right"></i> Logout
+                </a>
+            </div>
+        </div>
+
+        <div class="col-lg-8">
+            <div class="account-card">
+                <h4 class="mb-4"><i class="bi bi-clock-history"></i> Recent Problems</h4>
+                
+                {% if problems %}
+                <div class="recent-problems-list">
+                    {% for problem in problems[:10] %}
+                    <div class="recent-problem-item">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-0">{{ problem.equation_name }}</h6>
+                                <small class="text-muted">{{ problem.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
+                            </div>
+                            <div class="btn-group">
+                                <a href="{{ url_for('export_graph', problem_id=problem.id) }}" class="btn btn-sm btn-outline-success" title="Export Graph">
+                                    <i class="bi bi-image"></i>
+                                </a>
+                                <a href="{{ url_for('export_excel', problem_id=problem.id) }}" class="btn btn-sm btn-outline-info" title="Export Excel">
+                                    <i class="bi bi-file-excel"></i>
+                                </a>
+                            </div>
+                        </div>
+                        {% set params = problem.get_parameters() %}
+                        <div class="mt-2">
+                            <small class="text-muted">
+                                {% for key, value in params.items() %}
+                                {{ key }}={{ value }}{% if not loop.last %}, {% endif %}
+                                {% endfor %}
+                            </small>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                {% if problems|length > 10 %}
+                <div class="text-center mt-3">
+                    <a href="{{ url_for('problems') }}" class="btn btn-outline-primary">
+                        View All Problems
+                    </a>
+                </div>
+                {% endif %}
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="bi bi-inbox" style="font-size: 3rem; color: var(--accent-secondary);"></i>
+                    <p class="mt-2 text-muted">No solved problems yet</p>
+                    <a href="{{ url_for('library') }}" class="btn btn-primary">
+                        <i class="bi bi-book"></i> Start Solving
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
